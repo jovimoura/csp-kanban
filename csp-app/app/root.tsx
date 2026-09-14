@@ -2,23 +2,21 @@ import {
   isRouteErrorResponse,
   Links,
   Meta,
-  NavLink,
   Outlet,
   Scripts,
   ScrollRestoration,
 } from "react-router";
 
 import type { Route } from "./+types/root";
-import { buttonVariants } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { cn } from "@/lib/utils";
+import { AppSidebar } from "@/components/layout/app-sidebar";
+import { MockProvider } from "@/lib/mocks/store";
 import "./app.css";
 
 export const links: Route.LinksFunction = () => [];
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="pt-BR" className="dark">
+    <html lang="pt-BR">
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -34,57 +32,29 @@ export function Layout({ children }: { children: React.ReactNode }) {
   );
 }
 
-const navLinks = [
-  { to: "/", label: "Home", end: true },
-  { to: "/tasks", label: "Tasks", end: false },
-  { to: "/users", label: "Users", end: false },
-];
-
 export default function App() {
   return (
-    <div className="min-h-svh bg-background text-foreground">
-      <header>
-        <nav className="mx-auto flex max-w-5xl items-center gap-6 px-4 py-4">
-          <NavLink to="/" className="font-heading text-sm font-medium tracking-tight">
-            CSP Kanban
-          </NavLink>
-          <div className="flex items-center gap-1">
-            {navLinks.map((link) => (
-              <NavLink
-                key={link.to}
-                to={link.to}
-                end={link.end}
-                className={({ isActive }) =>
-                  cn(
-                    buttonVariants({ variant: "ghost", size: "sm" }),
-                    isActive
-                      ? "bg-muted text-foreground"
-                      : "text-muted-foreground",
-                  )
-                }
-              >
-                {link.label}
-              </NavLink>
-            ))}
-          </div>
-        </nav>
-        <Separator />
-      </header>
-      <Outlet />
-    </div>
+    <MockProvider>
+      <div className="flex min-h-svh bg-background text-foreground">
+        <AppSidebar />
+        <div className="min-w-0 flex-1 bg-background">
+          <Outlet />
+        </div>
+      </div>
+    </MockProvider>
   );
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
   let message = "Oops!";
-  let details = "An unexpected error occurred.";
+  let details = "Ocorreu um erro inesperado.";
   let stack: string | undefined;
 
   if (isRouteErrorResponse(error)) {
-    message = error.status === 404 ? "404" : "Error";
+    message = error.status === 404 ? "404" : "Erro";
     details =
       error.status === 404
-        ? "The requested page could not be found."
+        ? "A página solicitada não foi encontrada."
         : error.statusText || details;
   } else if (import.meta.env.DEV && error && error instanceof Error) {
     details = error.message;

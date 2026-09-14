@@ -1,16 +1,10 @@
-import { Link } from "react-router";
+import { type FormEvent, useState } from "react";
+import { Link, useNavigate } from "react-router";
 
 import type { Route } from "./+types/users.new";
+import { FormPage, RequiredLabel } from "@/components/layout/form-page";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -18,65 +12,81 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { PROFILE_LABELS } from "@/lib/format";
+import { useMockStore } from "@/lib/mocks/store";
+import { USER_PROFILES, type UserProfile } from "@/lib/types";
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "Novo usuário | CSP Kanban" },
+    { title: "Cadastro de Usuário | CSP Tech" },
     { name: "description", content: "Cadastro de um novo usuário." },
   ];
 }
 
 export default function NewUser() {
+  const navigate = useNavigate();
+  const { addUser } = useMockStore();
+  const [name, setName] = useState("");
+  const [profile, setProfile] = useState<UserProfile | "">("");
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!name.trim() || !profile) return;
+
+    addUser({ name: name.trim(), profile });
+    navigate("/users");
+  }
+
   return (
-    <main className="mx-auto max-w-xl px-4 py-10">
-      <p className="text-sm text-muted-foreground">
-        <Link to="/users" className="hover:underline">
-          Users
-        </Link>{" "}
-        / Novo
-      </p>
-      <h1 className="mt-2 font-heading text-3xl font-medium tracking-tight">
-        Cadastro de usuário
-      </h1>
+    <FormPage
+      title="Cadastro de Usuário"
+      crumbs={[
+        { label: "Home", to: "/" },
+        { label: "Usuários", to: "/users" },
+        { label: "Novo" },
+      ]}
+    >
+      <form className="space-y-5" onSubmit={handleSubmit}>
+        <div className="space-y-2">
+          <RequiredLabel htmlFor="name">Nome</RequiredLabel>
+          <Input
+            id="name"
+            name="name"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            placeholder="Digite o nome do usuário"
+            required
+          />
+        </div>
 
-      <Card className="mt-8">
-        <CardHeader>
-          <CardTitle>Dados do usuário</CardTitle>
-        </CardHeader>
-        <form>
-          <CardContent className="space-y-5">
-            <div className="space-y-2">
-              <Label htmlFor="name">Nome</Label>
-              <Input id="name" name="name" required />
-            </div>
+        <div className="space-y-2">
+          <RequiredLabel htmlFor="profile">Perfil</RequiredLabel>
+          <Select
+            name="profile"
+            value={profile || undefined}
+            onValueChange={(value) => setProfile(value as UserProfile)}
+            required
+          >
+            <SelectTrigger id="profile" className="w-full">
+              <SelectValue placeholder="Selecione o perfil" />
+            </SelectTrigger>
+            <SelectContent>
+              {USER_PROFILES.map((item) => (
+                <SelectItem key={item} value={item}>
+                  {PROFILE_LABELS[item]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="email">E-mail</Label>
-              <Input id="email" name="email" type="email" required />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="profile">Perfil</Label>
-              <Select name="profile" defaultValue="developer">
-                <SelectTrigger id="profile" className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="developer">Developer</SelectItem>
-                  <SelectItem value="agile">Agile</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-          <CardFooter className="gap-3">
-            <Button type="submit">Salvar</Button>
-            <Button variant="ghost" asChild>
-              <Link to="/users">Cancelar</Link>
-            </Button>
-          </CardFooter>
-        </form>
-      </Card>
-    </main>
+        <div className="flex min-h-52 items-end justify-end gap-3 pt-6">
+          <Button variant="outline" type="button" asChild>
+            <Link to="/users">Cancelar</Link>
+          </Button>
+          <Button type="submit">Salvar</Button>
+        </div>
+      </form>
+    </FormPage>
   );
 }

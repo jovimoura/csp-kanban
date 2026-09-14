@@ -1,50 +1,87 @@
+import { useMemo, useState } from "react";
+import { Bell, Plus, Search } from "lucide-react";
 import { Link } from "react-router";
 
 import type { Route } from "./+types/home";
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { KanbanBoard } from "@/components/kanban/kanban-board";
+import { TaskDetailsDialog } from "@/components/kanban/task-details-dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { UserAvatar } from "@/components/user-avatar";
+import { useMockStore } from "@/lib/mocks/store";
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "Home | CSP Kanban" },
-    { name: "description", content: "Painel inicial do CSP Kanban." },
+    { title: "Kanban | CSP Tech" },
+    { name: "description", content: "Quadro kanban das demandas da CSP Tech." },
   ];
 }
 
 export default function Home() {
-  return (
-    <main className="mx-auto max-w-5xl px-4 py-10">
-      <h1 className="font-heading text-3xl font-medium tracking-tight">Home</h1>
-      <p className="mt-2 text-sm text-muted-foreground">
-        Acompanhe tarefas e usuários do kanban.
-      </p>
+  const { tasks, users, updateTaskStatus } = useMockStore();
+  const [query, setQuery] = useState("");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-2">
-        <Link to="/tasks">
-          <Card className="transition-colors hover:bg-muted/40">
-            <CardHeader>
-              <CardTitle>Tasks</CardTitle>
-              <CardDescription>
-                Ver lista de tarefas e cadastrar novas.
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        </Link>
-        <Link to="/users">
-          <Card className="transition-colors hover:bg-muted/40">
-            <CardHeader>
-              <CardTitle>Users</CardTitle>
-              <CardDescription>
-                Ver usuários e cadastrar novos.
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        </Link>
+  const filteredTasks = useMemo(() => {
+    const term = query.trim().toLowerCase();
+    if (!term) return tasks;
+
+    return tasks.filter((task) => {
+      const assignee = users.find((user) => user.id === task.assignedTo);
+      return (
+        task.title.toLowerCase().includes(term) ||
+        assignee?.name.toLowerCase().includes(term)
+      );
+    });
+  }, [query, tasks, users]);
+
+  return (
+    <div className="flex h-svh flex-col">
+      <header className="flex items-center gap-4 px-6 py-4">
+        <h1 className="font-heading text-2xl font-semibold tracking-tight">
+          Kanban
+        </h1>
+
+        <div className="ml-auto flex items-center gap-3">
+          <div className="relative w-64">
+            <Input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Buscar demandas..."
+              className="h-10 rounded-full pr-9"
+              aria-label="Buscar demandas"
+            />
+            <Search className="pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2 text-muted-foreground" />
+          </div>
+
+          <Button asChild>
+            <Link to="/tasks/new">
+              <Plus data-icon="inline-start" />
+              Nova Demanda
+            </Link>
+          </Button>
+
+          <Button variant="ghost" size="icon" aria-label="Notificações">
+            <Bell />
+          </Button>
+
+          <UserAvatar name="Felipe Gomes" size="default" />
+        </div>
+      </header>
+
+      <div className="min-h-0 flex-1 px-6 pb-6">
+        <KanbanBoard
+          tasks={filteredTasks}
+          users={users}
+          onStatusChange={updateTaskStatus}
+          onOpenTask={setSelectedId}
+        />
       </div>
-    </main>
+
+      <TaskDetailsDialog
+        taskId={selectedId}
+        onClose={() => setSelectedId(null)}
+      />
+    </div>
   );
 }
