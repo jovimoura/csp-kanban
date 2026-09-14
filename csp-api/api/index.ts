@@ -4,7 +4,6 @@ import { fastify } from "fastify";
 import cors from "@fastify/cors";
 import { getHelloWorld } from "../routes/hello-world";
 import { postSignIn } from "../routes/signin";
-import { me } from '../routes/me';
 import swagger from '@fastify/swagger';
 
 const app = fastify();

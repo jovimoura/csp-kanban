@@ -2,30 +2,23 @@ import {
   isRouteErrorResponse,
   Links,
   Meta,
+  NavLink,
   Outlet,
   Scripts,
   ScrollRestoration,
 } from "react-router";
 
 import type { Route } from "./+types/root";
+import { buttonVariants } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { cn } from "@/lib/utils";
 import "./app.css";
 
-export const links: Route.LinksFunction = () => [
-  { rel: "preconnect", href: "https://fonts.googleapis.com" },
-  {
-    rel: "preconnect",
-    href: "https://fonts.gstatic.com",
-    crossOrigin: "anonymous",
-  },
-  {
-    rel: "stylesheet",
-    href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap",
-  },
-];
+export const links: Route.LinksFunction = () => [];
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="pt-BR" className="dark">
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -41,8 +34,45 @@ export function Layout({ children }: { children: React.ReactNode }) {
   );
 }
 
+const navLinks = [
+  { to: "/", label: "Home", end: true },
+  { to: "/tasks", label: "Tasks", end: false },
+  { to: "/users", label: "Users", end: false },
+];
+
 export default function App() {
-  return <Outlet />;
+  return (
+    <div className="min-h-svh bg-background text-foreground">
+      <header>
+        <nav className="mx-auto flex max-w-5xl items-center gap-6 px-4 py-4">
+          <NavLink to="/" className="font-heading text-sm font-medium tracking-tight">
+            CSP Kanban
+          </NavLink>
+          <div className="flex items-center gap-1">
+            {navLinks.map((link) => (
+              <NavLink
+                key={link.to}
+                to={link.to}
+                end={link.end}
+                className={({ isActive }) =>
+                  cn(
+                    buttonVariants({ variant: "ghost", size: "sm" }),
+                    isActive
+                      ? "bg-muted text-foreground"
+                      : "text-muted-foreground",
+                  )
+                }
+              >
+                {link.label}
+              </NavLink>
+            ))}
+          </div>
+        </nav>
+        <Separator />
+      </header>
+      <Outlet />
+    </div>
+  );
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
@@ -62,11 +92,11 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
   }
 
   return (
-    <main className="pt-16 p-4 container mx-auto">
+    <main className="container mx-auto p-4 pt-16">
       <h1>{message}</h1>
       <p>{details}</p>
       {stack && (
-        <pre className="w-full p-4 overflow-x-auto">
+        <pre className="w-full overflow-x-auto p-4">
           <code>{stack}</code>
         </pre>
       )}
