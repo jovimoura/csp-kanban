@@ -176,12 +176,11 @@ Essa arquitetura mantém `BACKEND_URL` e o JWT fora do bundle do navegador.
 ```text
 .
 ├── csp-api
-│   ├── api/                 # Entrada serverless da Vercel
 │   ├── db/                  # Cliente, schema e seed
 │   ├── drizzle/             # Migrações SQL
 │   ├── lib/                 # Autenticação, permissões e utilitários
 │   ├── routes/              # Endpoints Fastify
-│   └── server.ts            # Servidor para desenvolvimento local
+│   └── server.ts            # Entrypoint Fastify (local e Vercel)
 └── csp-app
     ├── app/routes/          # Rotas, loaders e actions
     ├── components/          # UI, Kanban, formulários e layout
@@ -455,8 +454,7 @@ As duas pastas devem ser configuradas como projetos separados.
   - `DATABASE_URL`.
   - `JWT_SECRET`.
   - `CORS_ORIGIN`, com a URL do front-end.
-- `api/index.ts` é a entrada serverless.
-- `vercel.json` encaminha as rotas para a função.
+- `server.ts` é o entrypoint da API na Vercel (detecção zero-config do Fastify) e também o servidor local.
 - Execute as migrações contra o banco de produção antes da primeira utilização.
 
 ### Front-end
@@ -501,7 +499,7 @@ O seed cria usuários de todos os perfis e demandas em todos os status, permitin
 
 ### RA-08 — Compatibilidade serverless
 
-A inicialização do Fastify foi separada entre servidor local e handler da Vercel, permitindo reutilização da mesma aplicação nos dois ambientes.
+A aplicação Fastify é montada em `lib/app.ts` e exportada por `server.ts`, que a Vercel usa como entrypoint zero-config; localmente o mesmo arquivo chama `listen()`.
 
 ## Qualidade e verificação
 
