@@ -1,11 +1,13 @@
-import { Link } from "react-router";
+import { Link, redirect } from "react-router";
 
 import type { Route } from "./+types/users";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { UserAvatar } from "@/components/user-avatar";
 import { PROFILE_LABELS } from "@/lib/format";
-import { useMockStore } from "@/lib/mocks/store";
+import { listUsers } from "@/lib/api/resources";
+import { requireUser } from "@/lib/session.server";
+import { can } from "@/lib/permissions";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -14,8 +16,17 @@ export function meta({}: Route.MetaArgs) {
   ];
 }
 
-export default function Users() {
-  const { users } = useMockStore();
+export async function loader({ request }: Route.LoaderArgs) {
+  const { token, user } = await requireUser(request);
+  if (!can(user.profile, "createUser")) {
+    throw redirect("/");
+  }
+  const users = await listUsers({ token });
+  return { users };
+}
+
+export default function Users({ loaderData }: Route.ComponentProps) {
+  const { users } = loaderData;
 
   return (
     <main className="px-8 py-6">

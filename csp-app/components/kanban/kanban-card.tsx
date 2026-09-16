@@ -9,15 +9,19 @@ import { cn } from "@/lib/utils";
 export function KanbanCard({
   task,
   assignee,
+  canMove = true,
   onOpen,
 }: {
   task: Task;
   assignee?: User;
+  canMove?: boolean;
   onOpen: (taskId: string) => void;
 }) {
+  const draggable = canMove && task.status !== "prod";
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: task.id,
     data: { status: task.status },
+    disabled: !draggable,
   });
 
   return (
@@ -27,7 +31,8 @@ export function KanbanCard({
       {...attributes}
       onClick={() => onOpen(task.id)}
       className={cn(
-        "cursor-grab rounded-xl bg-card p-3 shadow-sm ring-1 ring-foreground/6 transition-shadow hover:shadow-md",
+        "rounded-xl bg-card p-3 shadow-sm ring-1 ring-foreground/6 transition-shadow hover:shadow-md",
+        draggable ? "cursor-grab" : "cursor-pointer",
         isDragging && "opacity-40",
       )}
     >
@@ -45,11 +50,9 @@ export function KanbanCard({
           ) : (
             <span className="size-6" />
           )}
-          {task.status === "not_started" ? (
-            <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-              Não iniciada
-            </span>
-          ) : null}
+          <span className="truncate text-xs text-muted-foreground">
+            {assignee?.name ?? "Sem responsável"}
+          </span>
         </div>
         <span
           className={cn(

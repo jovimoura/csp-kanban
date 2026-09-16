@@ -1,19 +1,17 @@
-import { type FormEvent, useMemo, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router";
+import { type FormEvent, useState } from "react";
+import { redirect, useNavigate, useNavigation, useSubmit } from "react-router";
 
 import type { Route } from "./+types/tasks.new";
 import { FormPage, RequiredLabel } from "@/components/layout/form-page";
+import { AssigneeCombobox } from "@/components/forms/assignee-combobox";
+import { DueDateInput } from "@/components/forms/due-date-input";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useMockStore } from "@/lib/mocks/store";
+import { createTask, listTasks, listUsers, updateTask } from "@/lib/api/resources";
+import { requireUser } from "@/lib/session.server";
+import { can } from "@/lib/permissions";
+import { FieldError } from "@/components/forms/field-error";
 
 export function meta({}: Route.MetaArgs) {
   return [
@@ -22,59 +20,110 @@ export function meta({}: Route.MetaArgs) {
   ];
 }
 
-export default function NewTask() {
-  const [searchParams] = useSearchParams();
-  const taskId = searchParams.get("id");
+export async function loader({ request }: Route.LoaderArgs) {
+  const { token, user } = await requireUser(request);
+  const url = new URL(request.url);
+  const taskId = url.searchParams.get("id");
 
-  return <TaskForm key={taskId ?? "new"} taskId={taskId} />;
+  const editing = Boolean(taskId);
+  const requiredAction = editing ? "editTask" : "createTask";
+  if (!can(user.profile, requiredAction)) {
+    throw redirect("/kanban");
+  }
+
+  const [users, tasks] = await Promise.all([
+    listUsers({ token, assignable: true }),
+    editing ? listTasks(token) : Promise.resolve([]),
+  ]);
+
+  const task = taskId ? tasks.find((item) => item.id === taskId) ?? null : null;
+  if (editing && !task) {
+    throw redirect("/kanban");
+  }
+
+  return { users, task };
 }
 
-function TaskForm({ taskId }: { taskId: string | null }) {
-  const navigate = useNavigate();
-  const { users, tasks, addTask, updateTask } = useMockStore();
-  const editing = useMemo(
-    () => tasks.find((task) => task.id === taskId),
-    [tasks, taskId],
-  );
+export async function action({ request }: Route.ActionArgs) {
+  const { token, user } = await requireUser(request);
+  const formData = await request.formData();
 
-  const [title, setTitle] = useState(editing?.title ?? "");
-  const [assignedTo, setAssignedTo] = useState(editing?.assignedTo ?? "");
-  const [dueDate, setDueDate] = useState(editing?.dueDate ?? "");
-  const [description, setDescription] = useState(editing?.description ?? "");
+  const id = formData.get("id") ? String(formData.get("id")) : null;
+  const payload = {
+    title: String(formData.get("title") ?? "").trim(),
+    description: String(formData.get("description") ?? "").trim(),
+    dueDate: String(formData.get("dueDate") ?? ""),
+    assignedTo: String(formData.get("assignedTo") ?? ""),
+  };
+
+  const requiredAction = id ? "editTask" : "createTask";
+  if (!can(user.profile, requiredAction)) {
+    return { formError: "Você não tem permissão para esta ação." };
+  }
+
+  try {
+    if (id) {
+      await updateTask(token, id, payload);
+    } else {
+      await createTask(token, payload);
+    }
+    return redirect("/kanban");
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Erro ao salvar a demanda.";
+    return { formError: message };
+  }
+}
+
+type Errors = Partial<Record<"title" | "assignedTo" | "dueDate" | "description", string>>;
+
+export default function NewTask({ loaderData, actionData }: Route.ComponentProps) {
+  const { users, task } = loaderData;
+  const submit = useSubmit();
+  const navigate = useNavigate();
+  const navigation = useNavigation();
+  const isSubmitting = navigation.state !== "idle";
+
+  const [title, setTitle] = useState(task?.title ?? "");
+  const [assignedTo, setAssignedTo] = useState(task?.assignedTo ?? "");
+  const [dueDate, setDueDate] = useState(task?.dueDate ?? "");
+  const [description, setDescription] = useState(task?.description ?? "");
+  const [errors, setErrors] = useState<Errors>({});
+
+  function validate(): Errors {
+    const next: Errors = {};
+    if (!title.trim()) next.title = "O título é obrigatório.";
+    if (!assignedTo) next.assignedTo = "O responsável é obrigatório.";
+    if (!dueDate) next.dueDate = "A data é obrigatória.";
+    if (!description.trim()) next.description = "A descrição é obrigatória.";
+    return next;
+  }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!title.trim() || !assignedTo || !dueDate || !description.trim()) return;
+    const validation = validate();
+    setErrors(validation);
+    if (Object.keys(validation).length > 0) return;
 
-    if (editing) {
-      updateTask(editing.id, {
-        title: title.trim(),
-        assignedTo,
-        dueDate,
-        description: description.trim(),
-      });
-    } else {
-      addTask({
-        title: title.trim(),
-        assignedTo,
-        dueDate,
-        description: description.trim(),
-      });
-    }
-
-    navigate("/");
+    const formData = new FormData();
+    if (task) formData.set("id", task.id);
+    formData.set("title", title.trim());
+    formData.set("assignedTo", assignedTo);
+    formData.set("dueDate", dueDate);
+    formData.set("description", description.trim());
+    submit(formData, { method: "post" });
   }
 
   return (
     <FormPage
-      title={editing ? "Editar Demanda" : "Cadastro de Demanda"}
+      title={task ? "Editar Demanda" : "Cadastro de Demanda"}
       crumbs={[
-        { label: "Home", to: "/" },
-        { label: "Demandas", to: "/tasks" },
-        { label: editing ? "Editar" : "Novo" },
+        { label: "Início", to: "/" },
+        { label: "Kanban", to: "/kanban" },
+        { label: task ? "Editar" : "Nova Demanda" },
       ]}
     >
-      <form className="space-y-5" onSubmit={handleSubmit}>
+      <form className="space-y-5" onSubmit={handleSubmit} noValidate>
         <div className="space-y-2">
           <RequiredLabel htmlFor="title">Título</RequiredLabel>
           <Input
@@ -83,41 +132,32 @@ function TaskForm({ taskId }: { taskId: string | null }) {
             value={title}
             onChange={(event) => setTitle(event.target.value)}
             placeholder="Digite o título da demanda"
-            required
+            aria-invalid={Boolean(errors.title)}
           />
+          <FieldError message={errors.title} />
         </div>
 
         <div className="space-y-2">
           <RequiredLabel htmlFor="assignedTo">Responsável</RequiredLabel>
-          <Select
-            name="assignedTo"
-            value={assignedTo || undefined}
-            onValueChange={setAssignedTo}
-            required
-          >
-            <SelectTrigger id="assignedTo" className="w-full">
-              <SelectValue placeholder="Selecione o responsável" />
-            </SelectTrigger>
-            <SelectContent>
-              {users.map((user) => (
-                <SelectItem key={user.id} value={user.id}>
-                  {user.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <AssigneeCombobox
+            id="assignedTo"
+            users={users}
+            value={assignedTo}
+            onChange={setAssignedTo}
+            invalid={Boolean(errors.assignedTo)}
+          />
+          <FieldError message={errors.assignedTo} />
         </div>
 
         <div className="space-y-2">
           <RequiredLabel htmlFor="dueDate">Prazo</RequiredLabel>
-          <Input
+          <DueDateInput
             id="dueDate"
-            name="dueDate"
-            type="date"
             value={dueDate}
-            onChange={(event) => setDueDate(event.target.value)}
-            required
+            onChange={setDueDate}
+            invalid={Boolean(errors.dueDate)}
           />
+          <FieldError message={errors.dueDate} />
         </div>
 
         <div className="space-y-2">
@@ -129,15 +169,22 @@ function TaskForm({ taskId }: { taskId: string | null }) {
             onChange={(event) => setDescription(event.target.value)}
             placeholder="Descreva os detalhes da demanda"
             rows={4}
-            required
+            aria-invalid={Boolean(errors.description)}
           />
+          <FieldError message={errors.description} />
         </div>
 
+        {actionData?.formError ? (
+          <p className="text-sm text-destructive">{actionData.formError}</p>
+        ) : null}
+
         <div className="flex justify-end gap-3 pt-6">
-          <Button variant="outline" type="button" asChild>
-            <Link to="/">Cancelar</Link>
+          <Button variant="outline" type="button" onClick={() => navigate(-1)}>
+            Cancelar
           </Button>
-          <Button type="submit">Salvar</Button>
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Salvando..." : "Salvar"}
+          </Button>
         </div>
       </form>
     </FormPage>

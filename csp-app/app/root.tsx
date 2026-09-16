@@ -8,8 +8,6 @@ import {
 } from "react-router";
 
 import type { Route } from "./+types/root";
-import { AppSidebar } from "@/components/layout/app-sidebar";
-import { MockProvider } from "@/lib/mocks/store";
 import "./app.css";
 
 export const links: Route.LinksFunction = () => [];
@@ -33,16 +31,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  return (
-    <MockProvider>
-      <div className="flex min-h-svh bg-background text-foreground">
-        <AppSidebar />
-        <div className="min-w-0 flex-1 bg-background">
-          <Outlet />
-        </div>
-      </div>
-    </MockProvider>
-  );
+  return <Outlet />;
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {

@@ -9,11 +9,13 @@ export function KanbanColumn({
   status,
   tasks,
   usersById,
+  canMove = true,
   onOpenTask,
 }: {
   status: TaskStatus;
   tasks: Task[];
   usersById: Map<string, User>;
+  canMove?: boolean;
   onOpenTask: (taskId: string) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
@@ -42,6 +44,7 @@ export function KanbanColumn({
             key={task.id}
             task={task}
             assignee={usersById.get(task.assignedTo)}
+            canMove={canMove}
             onOpen={onOpenTask}
           />
         ))}

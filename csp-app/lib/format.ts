@@ -42,9 +42,9 @@ export const STATUS_META: Record<
 };
 
 export const PROFILE_LABELS: Record<UserProfile, string> = {
-  admin: "Admin",
-  developer: "Developer",
-  agile: "Agile",
+  admin: "Administrador",
+  developer: "Desenvolvedor",
+  agile: "Agilista",
 };
 
 export function getInitials(name: string) {

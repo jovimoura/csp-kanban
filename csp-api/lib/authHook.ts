@@ -1,19 +1,28 @@
-import { FastifyRequest, FastifyReply } from 'fastify';
-import { parseProtectedEvent } from './parseProtectedEvent';
+import { FastifyReply, FastifyRequest } from 'fastify';
+import { validateAccessToken } from './jwt';
 import { unauthorized } from './http';
 
+declare module 'fastify' {
+  interface FastifyRequest {
+    userId?: string;
+  }
+}
+
 export async function authenticate(request: FastifyRequest, reply: FastifyReply) {
-  try {
-    const protectedRequest = parseProtectedEvent(request);
-    
-    // Adiciona o userId ao request para uso nas rotas
-    (request as any).userId = protectedRequest.userId;
-    (request as any).body = protectedRequest.body;
-    (request as any).queryParams = protectedRequest.queryParams;
-    (request as any).params = protectedRequest.params;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unauthorized';
-    const response = unauthorized({ error: message });
+  const authorization = request.headers.authorization;
+
+  if (!authorization) {
+    const response = unauthorized({ error: 'Access token not provided.' });
     return reply.status(response.statusCode).send(response.body);
   }
+
+  const [, token] = authorization.split(' ');
+  const userId = token ? validateAccessToken(token) : null;
+
+  if (!userId) {
+    const response = unauthorized({ error: 'Invalid access token.' });
+    return reply.status(response.statusCode).send(response.body);
+  }
+
+  request.userId = String(userId);
 }

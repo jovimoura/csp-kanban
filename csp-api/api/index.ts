@@ -1,32 +1,17 @@
-import 'dotenv/config';
+import type { IncomingMessage, ServerResponse } from 'node:http';
+import { buildApp } from '../lib/app';
 
-import { fastify } from "fastify";
-import cors from "@fastify/cors";
-import { getHelloWorld } from "../routes/hello-world";
-import { postSignIn } from "../routes/signin";
-import swagger from '@fastify/swagger';
+const app = buildApp();
+let ready: Promise<unknown> | null = null;
 
-const app = fastify();
+export default async function handler(
+  req: IncomingMessage,
+  res: ServerResponse,
+) {
+  if (!ready) {
+    ready = Promise.resolve(app.ready());
+  }
+  await ready;
 
-app.register(cors, {
-  origin: "*",
-});
-
-app.register(getHelloWorld);
-app.register(postSignIn);
-app.register(swagger, {
-  routePrefix: '/docs',
-  exposeRoute: true,
-  swagger: {
-    info: { title: 'CSP API' },
-  },
-});
-app.register(me);
-
-app
-  .listen({
-    port: 3333,
-  })
-  .then(() => {
-    console.log("HTTP server running!");
-  });
+  app.server.emit('request', req, res);
+}

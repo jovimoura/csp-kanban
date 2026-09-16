@@ -12,17 +12,26 @@ import {
 } from "@/components/ui/dialog";
 import { UserAvatar } from "@/components/user-avatar";
 import { formatDueDate, STATUS_META } from "@/lib/format";
-import { useMockStore } from "@/lib/mocks/store";
+import type { Task, User } from "@/lib/types";
 
 export function TaskDetailsDialog({
   taskId,
+  tasks,
+  users,
+  canEdit,
+  canDelete,
+  onDelete,
   onClose,
 }: {
   taskId: string | null;
+  tasks: Task[];
+  users: User[];
+  canEdit: boolean;
+  canDelete: boolean;
+  onDelete: (taskId: string) => void;
   onClose: () => void;
 }) {
   const navigate = useNavigate();
-  const { tasks, users, removeTask } = useMockStore();
   const task = tasks.find((item) => item.id === taskId);
   const assignee = task
     ? users.find((user) => user.id === task.assignedTo)
@@ -31,8 +40,7 @@ export function TaskDetailsDialog({
 
   function handleDelete() {
     if (!task) return;
-    removeTask(task.id);
-    onClose();
+    onDelete(task.id);
   }
 
   function handleEdit() {
@@ -41,12 +49,11 @@ export function TaskDetailsDialog({
     navigate(`/tasks/new?id=${task.id}`);
   }
 
+  const showActions = canEdit || canDelete;
+
   return (
     <Dialog open={Boolean(task)} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent
-        className="gap-0 sm:max-w-md"
-        showCloseButton
-      >
+      <DialogContent className="gap-0 sm:max-w-md" showCloseButton>
         <DialogHeader className="pb-4">
           <DialogTitle>Detalhes da Demanda</DialogTitle>
         </DialogHeader>
@@ -96,22 +103,28 @@ export function TaskDetailsDialog({
           </div>
         ) : null}
 
-        <DialogFooter className="border-0 bg-transparent sm:justify-stretch">
-          <div className="grid w-full grid-cols-2 gap-3">
-            <Button variant="outline" onClick={handleEdit}>
-              <Pencil data-icon="inline-start" />
-              Editar
-            </Button>
-            <Button
-              variant="outline"
-              className="border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
-              onClick={handleDelete}
-            >
-              <Trash2 data-icon="inline-start" />
-              Excluir
-            </Button>
-          </div>
-        </DialogFooter>
+        {showActions ? (
+          <DialogFooter className="border-0 bg-transparent sm:justify-stretch">
+            <div className="flex w-full gap-3">
+              {canEdit ? (
+                <Button variant="outline" className="flex-1" onClick={handleEdit}>
+                  <Pencil data-icon="inline-start" />
+                  Editar
+                </Button>
+              ) : null}
+              {canDelete ? (
+                <Button
+                  variant="outline"
+                  className="flex-1 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  onClick={handleDelete}
+                >
+                  <Trash2 data-icon="inline-start" />
+                  Excluir
+                </Button>
+              ) : null}
+            </div>
+          </DialogFooter>
+        ) : null}
       </DialogContent>
     </Dialog>
   );

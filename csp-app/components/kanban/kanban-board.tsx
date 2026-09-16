@@ -21,11 +21,13 @@ function isTaskStatus(value: string): value is TaskStatus {
 export function KanbanBoard({
   tasks,
   users,
+  canMove = true,
   onStatusChange,
   onOpenTask,
 }: {
   tasks: Task[];
   users: User[];
+  canMove?: boolean;
   onStatusChange: (taskId: string, status: TaskStatus) => void;
   onOpenTask: (taskId: string) => void;
 }) {
@@ -68,7 +70,7 @@ export function KanbanBoard({
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     setActiveId(null);
-    if (!over) return;
+    if (!over || !canMove) return;
 
     const task = tasksById.get(String(active.id));
     if (!task || task.status === "prod") return;
@@ -101,6 +103,7 @@ export function KanbanBoard({
             status={status}
             tasks={grouped[status]}
             usersById={usersById}
+            canMove={canMove}
             onOpenTask={onOpenTask}
           />
         ))}
