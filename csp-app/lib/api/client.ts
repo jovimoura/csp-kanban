@@ -60,7 +60,14 @@ export async function apiFetch<T>(
   });
 
   const text = await response.text();
-  const parsed = text ? JSON.parse(text) : undefined;
+  let parsed: unknown;
+  if (text) {
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      parsed = { error: text };
+    }
+  }
 
   if (!response.ok) {
     throw new ApiError(response.status, extractErrorMessage(response.status, parsed), parsed);
