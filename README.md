@@ -427,6 +427,7 @@ Executados dentro de `csp-api`:
 - `npm run dev`: servidor local com recarregamento.
 - `npm run start`: servidor local sem watch.
 - `npm run typecheck`: validação TypeScript.
+- `npm run build`: aplica migrações (`db:migrate`); usado no deploy da Vercel.
 - `npm run db:generate`: gera uma migração a partir do schema.
 - `npm run db:migrate`: aplica as migrações.
 - `npm run db:seed`: recria os dados de demonstração.
@@ -455,7 +456,8 @@ As duas pastas devem ser configuradas como projetos separados.
   - `JWT_SECRET`.
   - `CORS_ORIGIN`, com a URL do front-end.
 - `server.ts` é o entrypoint da API na Vercel (detecção zero-config do Fastify) e também o servidor local.
-- Execute as migrações contra o banco de produção antes da primeira utilização.
+- **Build Command:** `npm run build` (aplica `drizzle-kit migrate` a cada deploy). A `DATABASE_URL` precisa existir também no ambiente de **build** (Production e Preview, se usar preview).
+- Migração manual local: `npm run db:migrate` (usa `DATABASE_URL` do `.env`).
 
 ### Front-end
 
